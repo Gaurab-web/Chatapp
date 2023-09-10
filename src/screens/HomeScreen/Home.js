@@ -11,7 +11,6 @@ import { useIsFocused } from "@react-navigation/native";
 const Home = (props) => {
     const { senderID } = props.route.params;
     const [data, setData] = useState([]);
-    // console.log('USER', data);
     let newArr = [];
     const isFocused = useIsFocused()
 
@@ -41,8 +40,7 @@ const Home = (props) => {
         props.navigation.navigate('Chatscreen', {
             item: i,
             senderID: senderData.uid,
-            senderPhoto: senderData.profilepic,
-            isStatus: i.isStatus
+            senderPhoto: senderData.profilepic
         })
     }
 

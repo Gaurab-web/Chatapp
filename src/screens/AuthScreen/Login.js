@@ -39,7 +39,7 @@ const Login = ({ navigation }) => {
           setLoader(false)
           showErrorAlert('Logged in successfully');
           firestore().collection('users').doc(res.user.uid).update({
-            isStatus : true,
+            isStatus : false,
             createdAt : new Date()
           })
           setTimeout(() => {

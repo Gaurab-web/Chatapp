@@ -8,8 +8,7 @@ import {
   TextInput,
   FlatList,
   KeyboardAvoidingView,
-  Platform,
-  AppState
+  Platform
 } from 'react-native';
 import Images from '../../themes/Images';
 import moment from 'moment';
@@ -20,22 +19,21 @@ import EmojiPicker from 'rn-emoji-keyboard'
 import ImagePicker from 'react-native-image-crop-picker';
 import Modal from "react-native-modal";
 import LinearGradient from 'react-native-linear-gradient';
+import Loader from '../../utils/helpers/Loader';
+import storage from '@react-native-firebase/storage';
 
 const Chatscreen = props => {
-  const { item, senderID, senderPhoto, isStatus } = props.route.params;
+  const { item, senderID, senderPhoto } = props.route.params;
   const [messages, setMessages] = useState([]);
-  // console.log('MSG', messages);
   const flatlistRef = useRef();
   const [text, setText] = useState('');
-  const appState = useRef(AppState.currentState);
-  const [appStateVisible, setAppStateVisible] = useState(appState.current);
   const [emojiKeyOpen, setEmojiOpen] = useState(false);
   const [imageURL, setImageUrl] = useState('');
   const [image, setImage] = useState('');
   const [isAttachVisible, setAttachVisible] = useState(false);
-  let newArr = [];
-  const [receiverStatus, setReceiverStatus] = useState(isStatus);
-  console.log('RECEIVER-->', receiverStatus);
+  const [receiveStat, setReceiveStat] = useState('');
+  const [isStat, setStat] = useState(false);
+  const [upURL, setUpURL] = useState('')
 
   const toggleModal = () => {
     setAttachVisible(!isAttachVisible);
@@ -44,30 +42,24 @@ const Chatscreen = props => {
     item.uid > senderID ? senderID + '-' + item.uid : item.uid + '-' + senderID;
 
   useEffect(() => {
-    const subscription = AppState.addEventListener('change', nextAppState => {
-      if (
-        appState.current.match(/inactive|background/)
-      ) {
-        console.log('App has come to the foreground!');
-        firestore().collection('users').doc(senderID).update({
-          isStatus: true
-        })
-      } else {
-        console.log('App has come to the Background!');
-        firestore().collection('users').doc(senderID).update({
-          isStatus: false
-        })
-      }
-
-      appState.current = nextAppState;
-      setAppStateVisible(appState.current);
-      console.log('AppState', appState.current);
-    });
+    const subscription = setInterval(() => {
+      firestore().collection('users').doc(senderID).update({
+        createdAt: new Date()
+      })
+      firestore()
+        .collection('users').doc(item.uid)
+        .get()
+        .then(querySnapshot => {
+          setReceiveStat(querySnapshot.data().createdAt.toDate());
+          setStat(querySnapshot.data().isStatus)
+        });
+    }, 1000);
 
     return () => {
-      subscription.remove();
+      clearInterval(subscription)
     };
   }, []);
+
 
   const getAllMsg = () => {
     const querySnap = firestore()
@@ -93,19 +85,18 @@ const Chatscreen = props => {
     getAllMsg();
   }, []);
 
-  useEffect(() => {
-    firestore()
-      .collection('users')
-      .get()
-      .then(querySnapshot => {
-        querySnapshot.forEach(documentSnapshot => {
-          newArr.push(documentSnapshot.data());
-          let updateArr = newArr.find(items => items.uid == item.uid);
-          console.log('DATA', updateArr);
-          setReceiverStatus(updateArr?.isStatus)
-        });
-      });
-  }, [appStateVisible]);
+  const typeFunc = (txt)=>{
+    if(txt.length !== 0 ){
+      firestore().collection('users').doc(senderID).update({
+        isStatus : true,
+      })
+    }
+    else{
+      firestore().collection('users').doc(senderID).update({
+        isStatus : false,
+      })
+    }
+  }
 
 
   const handleSend = () => {
@@ -117,7 +108,7 @@ const Chatscreen = props => {
       text: text,
       createdAt: new Date(),
       profilePic: senderPhoto,
-      imageDoc: imageURL,
+      imageDoc: upURL,
       imageName: image?.modificationDate + '.' + image?.mime?.slice(6, 10)
     };
     setMessages([
@@ -128,7 +119,7 @@ const Chatscreen = props => {
         text: text,
         createdAt: new Date(),
         profilePic: senderPhoto,
-        imageDoc: imageURL,
+        imageDoc: upURL,
         imageName: image?.modificationDate + '.' + image?.mime?.slice(6, 10)
       },
     ]);
@@ -153,8 +144,19 @@ const Chatscreen = props => {
       cropping: true,
     }).then(image => {
       setImageUrl(image.path);
+      uploadImage(image);
       setImage(image)
-      firestore()
+    });
+  };
+
+  const uploadImage = async(img)=>{
+    const fileName = 'Image'+ Date.now() + '.' + img.mime;
+    const refernce = storage().ref(fileName);
+    const pathToFile = img.path;
+    await refernce.putFile(pathToFile);
+
+    const url = await storage().ref(fileName).getDownloadURL();
+    firestore()
         .collection('chatrooms')
         .doc(docID)
         .collection('messages')
@@ -164,10 +166,10 @@ const Chatscreen = props => {
           text: text,
           createdAt: new Date(),
           profilePic: senderPhoto,
-          imageDoc: image.path,
+          imageDoc: url,
           imageName: image?.modificationDate + '.' + image?.mime?.slice(6, 10)
         });
-    });
+    setUpURL(url)
   }
   return (
     <SafeAreaView
@@ -175,6 +177,7 @@ const Chatscreen = props => {
         flex: 1,
         backgroundColor: '#fff',
       }}>
+      <Loader visible={receiveStat == ''} />
       <View
         style={{
           height: 55,
@@ -234,21 +237,23 @@ const Chatscreen = props => {
               }}>
               {item.name}
             </Text>
-            <Text
+            { isStat ? 
+            <Text style={{
+                fontSize: 10,
+                fontFamily: Fonts.regular_font,
+                color: '#000',
+              }}>Typing...</Text>
+            : <Text
               style={{
                 fontSize: 10,
                 fontFamily: Fonts.regular_font,
                 color: '#000',
               }}>
-              {receiverStatus == true ? 'Online'
-                :
-                'last seen at ' +
-                moment(messages?.length == 0 || messages?.find(i => i?.senderID == item?.uid) == undefined ?
-                  item?.createdAt
-                  :
-                  messages?.find(i => i?.senderID == item?.uid)?.createdAt).format('hh:mm A')
+              {new Date().getTime() - new Date(receiveStat).getTime() > 30000 || 
+              isNaN(new Date().getTime() - new Date(receiveStat).getTime()) ? 
+              'last seen at ' + moment(receiveStat).fromNow() : 'Online'
               }
-            </Text>
+            </Text>}
           </View>
         </View>
       </View>
@@ -419,6 +424,7 @@ const Chatscreen = props => {
                 value={text}
                 onChangeText={newText => {
                   setText(newText);
+                  typeFunc(newText)
                 }}
                 style={{
                   width: '100%',

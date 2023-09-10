@@ -21,6 +21,7 @@ import normalize from '../../utils/helpers/dimen'
 import Modal from "react-native-modal";
 import ImagePicker from 'react-native-image-crop-picker';
 import Loader from '../../utils/helpers/Loader';
+import storage from '@react-native-firebase/storage';
 
 const SignUp = ({ navigation }) => {
   const [show, setShow] = useState(true);
@@ -29,6 +30,7 @@ const SignUp = ({ navigation }) => {
   const [name, setName] = useState('');
   const [isModalVisible, setModalVisible] = useState(false);
   const [imageURL, setImageUrl] = useState('');
+  const [upURL, setUpURL] = useState('')
   const [loaderVisible, setLoader] = useState(false);
 
   const handleSignUp = () => {
@@ -46,7 +48,7 @@ const SignUp = ({ navigation }) => {
           setLoader(false)
           firestore().collection('users').doc(res.user.uid).set({
             name: name,
-            profilepic : imageURL,
+            profilepic : upURL,
             email: res.user.email,
             uid: res.user.uid,
             isStatus : false,
@@ -87,6 +89,7 @@ const SignUp = ({ navigation }) => {
     }).then(image => {
       setImageUrl(image.path);
       setModalVisible(false)
+      uploadImage(image)
     });
   };
 
@@ -97,9 +100,21 @@ const SignUp = ({ navigation }) => {
       cropping: true,
     }).then(image => {
       setImageUrl(image.path);
-      setModalVisible(false)
+      setModalVisible(false);
+      uploadImage(image)
     });
   }
+
+  const uploadImage = async(img)=>{
+    const fileName = 'Image'+ Date.now() + '.' + img.mime;
+    const refernce = storage().ref(fileName);
+    const pathToFile = img.path;
+    await refernce.putFile(pathToFile);
+
+    const url = await storage().ref(fileName).getDownloadURL();
+    setUpURL(url)
+  }
+
   return (
     <KeyboardAvoidingView
       style={{
