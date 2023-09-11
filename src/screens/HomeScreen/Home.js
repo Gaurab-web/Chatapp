@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, SafeAreaView, Image, TextInput, TouchableOpacity, FlatList } from "react-native";
+import { View, Text, SafeAreaView, Image, TextInput, TouchableOpacity, FlatList,StatusBar } from "react-native";
 import normalize from '../../utils/helpers/dimen'
 import Fonts from "../../themes/Fonts";
 import Images from "../../themes/Images";
@@ -7,6 +7,7 @@ import firestore from '@react-native-firebase/firestore';
 import Loader from "../../utils/helpers/Loader";
 import moment from "moment";
 import { useIsFocused } from "@react-navigation/native";
+import MyStatusBar from "../../utils/MyStatusBar";
 
 const Home = (props) => {
     const { senderID } = props.route.params;
@@ -45,9 +46,13 @@ const Home = (props) => {
     }
 
     return (
-        <View style={{
-            flex: 1
-        }}>
+        <SafeAreaView
+            style={{
+                flex: 1,
+                backgroundColor: '#fff',
+                paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0
+            }}>
+            <MyStatusBar backgroundColor={'#242e38'} />
             <Loader visible={data.length == 0} />
             <View style={{
                 flexDirection: 'row',
@@ -219,7 +224,7 @@ const Home = (props) => {
                     </TouchableOpacity>
                 )}
             />
-        </View>
+        </SafeAreaView>
     )
 }
 

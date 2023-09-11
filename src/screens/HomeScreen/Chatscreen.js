@@ -8,19 +8,22 @@ import {
   TextInput,
   FlatList,
   KeyboardAvoidingView,
-  Platform
+  Platform,
+  ImageBackground,
+  StatusBar
 } from 'react-native';
 import Images from '../../themes/Images';
 import moment from 'moment';
 import firestore from '@react-native-firebase/firestore';
 import normalize from '../../utils/helpers/dimen'
 import Fonts from '../../themes/Fonts';
-import EmojiPicker from 'rn-emoji-keyboard'
+import EmojiPicker, { no } from 'rn-emoji-keyboard'
 import ImagePicker from 'react-native-image-crop-picker';
 import Modal from "react-native-modal";
 import LinearGradient from 'react-native-linear-gradient';
 import Loader from '../../utils/helpers/Loader';
 import storage from '@react-native-firebase/storage';
+import MyStatusBar from '../../utils/MyStatusBar';
 
 const Chatscreen = props => {
   const { item, senderID, senderPhoto } = props.route.params;
@@ -85,15 +88,15 @@ const Chatscreen = props => {
     getAllMsg();
   }, []);
 
-  const typeFunc = (txt)=>{
-    if(txt.length !== 0 ){
+  const typeFunc = (txt) => {
+    if (txt.length !== 0) {
       firestore().collection('users').doc(senderID).update({
-        isStatus : true,
+        isStatus: true,
       })
     }
-    else{
+    else {
       firestore().collection('users').doc(senderID).update({
-        isStatus : false,
+        isStatus: false,
       })
     }
   }
@@ -132,7 +135,10 @@ const Chatscreen = props => {
 
 
     firestore().collection('users').doc(item.uid).update({
-      lastMsg: myMsg
+      lastMsg: myMsg,
+    });
+    firestore().collection('users').doc(senderID).update({
+      isStatus: false,
     })
     setText('');
   };
@@ -149,26 +155,26 @@ const Chatscreen = props => {
     });
   };
 
-  const uploadImage = async(img)=>{
-    const fileName = 'Image'+ Date.now() + '.' + img.mime;
+  const uploadImage = async (img) => {
+    const fileName = 'Image' + Date.now() + '.' + img.mime;
     const refernce = storage().ref(fileName);
     const pathToFile = img.path;
     await refernce.putFile(pathToFile);
 
     const url = await storage().ref(fileName).getDownloadURL();
     firestore()
-        .collection('chatrooms')
-        .doc(docID)
-        .collection('messages')
-        .add({
-          senderID: senderID,
-          receiverID: item.uid,
-          text: text,
-          createdAt: new Date(),
-          profilePic: senderPhoto,
-          imageDoc: url,
-          imageName: image?.modificationDate + '.' + image?.mime?.slice(6, 10)
-        });
+      .collection('chatrooms')
+      .doc(docID)
+      .collection('messages')
+      .add({
+        senderID: senderID,
+        receiverID: item.uid,
+        text: text,
+        createdAt: new Date(),
+        profilePic: senderPhoto,
+        imageDoc: url,
+        imageName: image?.modificationDate + '.' + image?.mime?.slice(6, 10)
+      });
     setUpURL(url)
   }
   return (
@@ -176,16 +182,19 @@ const Chatscreen = props => {
       style={{
         flex: 1,
         backgroundColor: '#fff',
+        paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0
       }}>
+      <MyStatusBar backgroundColor={'#242e38'} />
       <Loader visible={receiveStat == ''} />
       <View
         style={{
           height: 55,
           shadowColor: '#000',
-          borderBottomWidth: 0.4,
+          borderBottomWidth: 1,
           flexDirection: 'row',
           alignItems: 'center',
-          borderBottomColor: '#ccc',
+          borderBottomColor: '#fff',
+          backgroundColor: '#242e38'
         }}>
         <TouchableOpacity
           style={{
@@ -201,6 +210,7 @@ const Chatscreen = props => {
             style={{
               width: 15,
               height: 15,
+              tintColor: '#fff'
             }}
           />
         </TouchableOpacity>
@@ -214,14 +224,15 @@ const Chatscreen = props => {
             width: '12%',
             height: '100%',
             justifyContent: "center",
-            alignItems: 'center'
+            alignItems: 'center',
+            marginRight:normalize(3)
           }}>
             <Image
               source={{ uri: item.profilepic }}
               resizeMode='contain'
               style={{
-                width: normalize(20),
-                height: normalize(20),
+                width: normalize(25),
+                height: normalize(25),
                 borderRadius: normalize(20)
               }}
             />
@@ -231,39 +242,42 @@ const Chatscreen = props => {
           }}>
             <Text
               style={{
-                fontSize: 14,
+                fontSize: 12,
                 fontFamily: Fonts.regular_font,
-                color: '#000',
+                color: '#fff',
               }}>
               {item.name}
             </Text>
-            { isStat ? 
-            <Text style={{
-                fontSize: 10,
+            {isStat ?
+              <Text style={{
+                fontSize: 8,
                 fontFamily: Fonts.regular_font,
-                color: '#000',
+                color: '#fff',
               }}>Typing...</Text>
-            : <Text
-              style={{
-                fontSize: 10,
-                fontFamily: Fonts.regular_font,
-                color: '#000',
-              }}>
-              {new Date().getTime() - new Date(receiveStat).getTime() > 30000 || 
-              isNaN(new Date().getTime() - new Date(receiveStat).getTime()) ? 
-              'last seen at ' + moment(receiveStat).fromNow() : 'Online'
-              }
-            </Text>}
+              : <Text
+                style={{
+                  fontSize: 8,
+                  fontFamily: Fonts.regular_font,
+                  color: '#fff',
+                }}>
+                {new Date().getTime() - new Date(receiveStat).getTime() > 30000 ||
+                  isNaN(new Date().getTime() - new Date(receiveStat).getTime()) ?
+                  'last seen at ' + moment(receiveStat).fromNow() : 'Online'
+                }
+              </Text>}
           </View>
         </View>
       </View>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS == 'ios' ? 'padding' : undefined}>
-        <View
+        <ImageBackground
           style={{
             flex: 1,
-          }}>
+          }}
+          source={Images.bckImage}
+          blurRadius={10}
+        >
           <FlatList
             data={messages}
             ref={flatlistRef}
@@ -288,7 +302,7 @@ const Chatscreen = props => {
                 }}>
                 <View
                   style={{
-                    backgroundColor: item.senderID == senderID ? '#fa636f' : '#ccc',
+                    backgroundColor: item.senderID == senderID ? '#075e54' : '#242e38',
                     paddingHorizontal: 15,
                     paddingVertical: 10,
                     maxWidth: '90%',
@@ -335,19 +349,22 @@ const Chatscreen = props => {
             )}
             showsVerticalScrollIndicator={false}
           />
-          <View
+          <ImageBackground
             style={{
-              width: '100%',
-              height: 'auto',
-              backgroundColor: '#fff',
+              flex: 1,
               position: 'absolute',
               bottom: 0,
               flexDirection: 'row',
               alignItems: 'center',
-              marginHorizontal: normalize(8),
-            }}>
+              paddingHorizontal: normalize(8),
+              justifyContent: 'space-between',
+              height: text.length > 30 ? 'auto' : normalize(50)
+            }}
+            source={Images.textBack}
+            blurRadius={10}
+          >
             <View style={{
-              width: '82%',
+              width: '85%',
               height: '85%',
             }}>
               <TouchableOpacity style={{
@@ -359,7 +376,7 @@ const Chatscreen = props => {
                 zIndex: 1,
                 justifyContent: 'center',
                 alignItems: 'center',
-                borderRadius: normalize(50)
+                borderRadius: normalize(50),
               }}
                 onPress={() => setEmojiOpen(true)}
               >
@@ -369,6 +386,7 @@ const Chatscreen = props => {
                   style={{
                     width: normalize(15),
                     height: normalize(15),
+                    tintColor: '#aaa'
                   }}
                 />
               </TouchableOpacity>
@@ -420,7 +438,7 @@ const Chatscreen = props => {
               </TouchableOpacity>
               <TextInput
                 placeholder="Type your message..."
-                placeholderTextColor={'#000'}
+                placeholderTextColor={'#aaa'}
                 value={text}
                 onChangeText={newText => {
                   setText(newText);
@@ -428,24 +446,28 @@ const Chatscreen = props => {
                 }}
                 style={{
                   width: '100%',
-                  height: '100%',
+                  height: text.length > 50 ? 'auto' : normalize(43),
                   fontSize: 14,
-                  color: '#000',
-                  backgroundColor: '#eee',
+                  color: '#fff',
+                  backgroundColor: '#242e38',
                   paddingLeft: normalize(38),
                   paddingRight: normalize(65),
-                  borderRadius: normalize(50),
-                  fontFamily: Fonts.light_font
+                  borderRadius: text.length > 50 ? normalize(20) : normalize(50),
+                  fontFamily: Fonts.light_font,
+                  paddingTop: normalize(9.5)
                 }}
                 multiline={true}
               />
             </View>
             <TouchableOpacity
               style={{
-                width: '15%',
-                height: '100%',
+                width: normalize(40),
+                height: normalize(40),
                 justifyContent: 'center',
                 alignItems: 'center',
+                backgroundColor: text == '' ? '#242e38' : '#075e54',
+                borderRadius: normalize(200),
+                marginLeft: normalize(5)
               }}
               onPress={() => handleSend()}
               disabled={text == '' ? true : false}
@@ -454,14 +476,14 @@ const Chatscreen = props => {
                 source={Images.sendMsg}
                 resizeMode="contain"
                 style={{
-                  width: '100%',
-                  height: normalize(50),
-                  transform: [{ rotate: '180deg' }],
-                  tintColor: text == '' ? '#ccc' : '#fa636f',
+                  width: normalize(15),
+                  height: normalize(15),
+                  tintColor: '#fff',
+                  marginLeft: normalize(3)
                 }}
               />
             </TouchableOpacity>
-          </View>
+          </ImageBackground>
           <EmojiPicker
             open={emojiKeyOpen}
             onClose={() => setEmojiOpen(false)}
@@ -475,14 +497,18 @@ const Chatscreen = props => {
             style={{
               margin: 0,
             }}
+            animationIn={'slideInUp'}
+            animationOut={'slideOutDown'}
+            animationInTiming={600}
+            animationOutTiming={600}
           >
             <View
               style={{
-                height: '10%',
-                width: '95%',
+                height: '30%',
+                width: '90%',
                 position: 'absolute',
                 bottom: normalize(50),
-                backgroundColor: 'rgba(0,0,0,0.5)',
+                backgroundColor: '#101d25',
                 justifyContent: 'center',
                 alignItems: 'center',
                 borderRadius: normalize(20),
@@ -491,16 +517,17 @@ const Chatscreen = props => {
               <View style={{
                 // backgroundColor: 'red',
                 width: '60%',
-                height: '100%',
+                height: '40%',
                 flexDirection: 'row',
                 alignItems: 'center',
                 justifyContent: 'space-between',
               }}>
-                <LinearGradient colors={['#fff', '#ddd', '#ccc']}
+                <LinearGradient colors={['#C79DF1', '#9C6BCD', '#5A05AF']}
                   style={{
-                    width: normalize(50),
-                    height: normalize(50),
-                    borderRadius: normalize(100)
+                    width: normalize(45),
+                    height: normalize(45),
+                    borderRadius: normalize(100),
+                    alignItems: 'center'
                   }}
                 >
                   <TouchableOpacity
@@ -515,18 +542,24 @@ const Chatscreen = props => {
                       source={Images.fileIcon}
                       resizeMode='contain'
                       style={{
-                        width: normalize(18),
-                        height: normalize(18),
-                        tintColor: '#fa446f'
+                        width: normalize(15),
+                        height: normalize(15),
+                        tintColor: '#fff'
                       }}
                     />
                   </TouchableOpacity>
+                  <Text style={{
+                    color: '#aaa',
+                    fontFamily: Fonts.regular_font,
+                    fontSize: normalize(7)
+                  }}>Document</Text>
                 </LinearGradient>
-                <LinearGradient colors={['#fff', '#ddd', '#ccc']}
+                <LinearGradient colors={['#FC7979', '#F74747', '#EE0505']}
                   style={{
-                    width: normalize(50),
-                    height: normalize(50),
-                    borderRadius: normalize(100)
+                    width: normalize(45),
+                    height: normalize(45),
+                    borderRadius: normalize(100),
+                    alignItems: 'center'
                   }}
                 >
                   <TouchableOpacity
@@ -541,18 +574,24 @@ const Chatscreen = props => {
                       source={Images.cameraIcon}
                       resizeMode='contain'
                       style={{
-                        width: normalize(18),
-                        height: normalize(18),
-                        tintColor: '#fa446f'
+                        width: normalize(15),
+                        height: normalize(15),
+                        tintColor: '#fff'
                       }}
                     />
                   </TouchableOpacity>
+                  <Text style={{
+                    color: '#aaa',
+                    fontFamily: Fonts.regular_font,
+                    fontSize: normalize(7)
+                  }}>Camera</Text>
                 </LinearGradient>
-                <LinearGradient colors={['#fff', '#ddd', '#ccc']}
+                <LinearGradient colors={['#DB81ED', '#A14DB2', '#9205AF']}
                   style={{
-                    width: normalize(50),
-                    height: normalize(50),
-                    borderRadius: normalize(100)
+                    width: normalize(45),
+                    height: normalize(45),
+                    borderRadius: normalize(100),
+                    alignItems: 'center'
                   }}
                 >
                   <TouchableOpacity
@@ -567,17 +606,127 @@ const Chatscreen = props => {
                       source={Images.galleryIcon}
                       resizeMode='contain'
                       style={{
-                        width: normalize(18),
-                        height: normalize(18),
-                        tintColor: '#fa446f'
+                        width: normalize(15),
+                        height: normalize(15),
+                        tintColor: '#fff'
                       }}
                     />
                   </TouchableOpacity>
+                  <Text style={{
+                    color: '#aaa',
+                    fontFamily: Fonts.regular_font,
+                    fontSize: normalize(7)
+                  }}>Gallery</Text>
+                </LinearGradient>
+              </View>
+              <View style={{
+                // backgroundColor: 'red',
+                width: '60%',
+                height: '45%',
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}>
+                <LinearGradient colors={['#FE9C77', '#FA6E39', '#F74604']}
+                  style={{
+                    width: normalize(45),
+                    height: normalize(45),
+                    borderRadius: normalize(100),
+                    alignItems: 'center'
+                  }}
+                >
+                  <TouchableOpacity
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      justifyContent: 'center',
+                      alignItems: 'center'
+                    }}
+                  >
+                    <Image
+                      source={Images.hdPhne}
+                      resizeMode='contain'
+                      style={{
+                        width: normalize(15),
+                        height: normalize(15),
+                        tintColor: '#fff'
+                      }}
+                    />
+                  </TouchableOpacity>
+                  <Text style={{
+                    color: '#aaa',
+                    fontFamily: Fonts.regular_font,
+                    fontSize: normalize(7)
+                  }}>Audio</Text>
+                </LinearGradient>
+                <LinearGradient colors={['#71C19B', '#3FAB78', '#02A056']}
+                  style={{
+                    width: normalize(45),
+                    height: normalize(45),
+                    borderRadius: normalize(100),
+                    alignItems: 'center'
+                  }}
+                >
+                  <TouchableOpacity
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      justifyContent: 'center',
+                      alignItems: 'center'
+                    }}
+                  >
+                    <Image
+                      source={Images.location}
+                      resizeMode='contain'
+                      style={{
+                        width: normalize(15),
+                        height: normalize(15),
+                        tintColor: '#fff'
+                      }}
+                    />
+                  </TouchableOpacity>
+                  <Text style={{
+                    color: '#aaa',
+                    fontFamily: Fonts.regular_font,
+                    fontSize: normalize(7)
+                  }}>Location</Text>
+                </LinearGradient>
+                <LinearGradient colors={['#84B8F6', '#4B96F0', '#006BEB']}
+                  style={{
+                    width: normalize(45),
+                    height: normalize(45),
+                    borderRadius: normalize(100),
+                    alignItems: 'center'
+                  }}
+                >
+                  <TouchableOpacity
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      justifyContent: 'center',
+                      alignItems: 'center'
+                    }}
+                  >
+                    <Image
+                      source={Images.contact_icon}
+                      resizeMode='contain'
+                      style={{
+                        width: normalize(15),
+                        height: normalize(15),
+                        tintColor: '#fff'
+                      }}
+                    />
+                  </TouchableOpacity>
+                  <Text style={{
+                    color: '#aaa',
+                    fontFamily: Fonts.regular_font,
+                    fontSize: normalize(7)
+                  }}>Contact</Text>
                 </LinearGradient>
               </View>
             </View>
           </Modal>
-        </View>
+        </ImageBackground>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

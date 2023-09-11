@@ -1,7 +1,6 @@
 import React from 'react';
 import {StatusBar, Platform, StyleSheet, SafeAreaView} from 'react-native';
 import propTypes from 'prop-types';
-import { Colors } from '../themes/ImagePath';
 import normalize from '../utils/helpers/dimen';
 const STATUSBAR_HEIGHT = StatusBar.currentHeight;
 
@@ -25,7 +24,7 @@ MyStatusBar.propTypes = {
 };
 
 MyStatusBar.defaultProps = {
-  backgroundColor: Colors.darkBlue,
+  backgroundColor: '#000',
   barStyle: 'light-content',
   height: normalize(20),
   translucent: false,

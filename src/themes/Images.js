@@ -15,7 +15,12 @@ const Images = {
     cameraIcon : require('../assets/cameraIcon.png'),
     attachIcon : require('../assets/attachIcon.png'),
     fileIcon : require('../assets/fileIcon.png'),
-    galleryIcon : require('../assets/galleryIcon.png')
+    galleryIcon : require('../assets/galleryIcon.png'),
+    bckImage : require('../assets/bck_img.jpg'),
+    textBack : require('../assets/textMsg_back.jpg'),
+    hdPhne : require('../assets/headphone.png'),
+    location : require('../assets/location.png'),
+    contact_icon : require('../assets/contact_user.png')
 }
 
 export default Images;
